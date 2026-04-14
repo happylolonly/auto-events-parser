@@ -1,0 +1,1 @@
+"""Events parser application package."""

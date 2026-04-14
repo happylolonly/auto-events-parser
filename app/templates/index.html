@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Da Nang Auto Events Parser</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div>
+          <h1><span>Da Nang</span> Auto Events Parser</h1>
+          <div class="tags">
+            <span class="tag tag-ai">AI</span>
+            <span class="tag tag-crypto">Crypto</span>
+            <span class="tag tag-tech">Tech</span>
+          </div>
+        </div>
+        <a href="/add" class="btn btn-primary">+ Add event</a>
+      </div>
+
+      <div class="actions-bar">
+        <a href="#" class="btn btn-outline" onclick="return false">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#2AABEE"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.28-.02-.12.03-2.02 1.28-5.69 3.77-.54.37-1.03.55-1.47.54-.48-.01-1.41-.27-2.1-.5-.85-.28-1.52-.43-1.46-.91.03-.25.38-.51 1.05-.78 4.12-1.79 6.87-2.97 8.26-3.55 3.93-1.62 4.75-1.9 5.28-1.91.12 0 .37.03.54.17.14.12.18.28.2.47-.01.06.01.24 0 .37z"/></svg>
+          Telegram Channel
+        </a>
+        <a href="#" class="btn btn-outline" onclick="return false">
+          &#128197; Subscribe to Calendar
+        </a>
+      </div>
+
+      <div id="error" class="msg msg-error"></div>
+
+      <ul id="events-list" class="events-list"></ul>
+    </div>
+
+    <script>
+      const errorEl = document.getElementById("error");
+      const listEl = document.getElementById("events-list");
+
+      const fmt = (value) => {
+        if (!value) return "unknown";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+      };
+
+      const buildCard = (ev) => {
+        const li = document.createElement("li");
+        const loc = ev.location || "unknown";
+        const mapUrl = loc !== "unknown"
+          ? `https://www.google.com/maps/search/${encodeURIComponent(loc)}`
+          : null;
+        const date = ev.start_at ? new Date(ev.start_at) : null;
+        const now = new Date();
+        const isPast = date && date < now;
+        const isToday = date
+          && date.getFullYear() === now.getFullYear()
+          && date.getMonth() === now.getMonth()
+          && date.getDate() === now.getDate();
+
+        li.className = "event-card" + (isPast ? " event-past" : "") + (isToday ? " event-today" : "");
+        const badge = isToday
+          ? '<span class="badge-today">Today</span>'
+          : isPast ? '<span class="badge-past">Past</span>' : "";
+        li.innerHTML = `
+          ${badge}
+          <div class="title">${ev.title}</div>
+          <div class="meta">
+            <span>&#128197; ${fmt(ev.start_at)}</span>
+            <span>${mapUrl
+              ? `<a href="${mapUrl}" target="_blank" rel="noopener" class="meta-link">&#128205; ${loc}</a>`
+              : `&#128205; ${loc}`
+            }</span>
+          </div>
+          <div class="source"><a href="${ev.source_url}" target="_blank" rel="noopener">${ev.source_url}</a></div>
+        `;
+        return li;
+      };
+
+      const renderEvents = (events) => {
+        listEl.innerHTML = "";
+        if (!events.length) {
+          listEl.innerHTML = '<li class="empty">No events yet. Add your first one!</li>';
+          return;
+        }
+
+        const now = new Date();
+        const byDate = (a, b) => (new Date(a.start_at || 0)) - (new Date(b.start_at || 0));
+        const upcoming = events.filter((ev) => !ev.start_at || new Date(ev.start_at) >= now).sort(byDate);
+        const past = events.filter((ev) => ev.start_at && new Date(ev.start_at) < now).sort(byDate);
+
+        for (const ev of upcoming) listEl.appendChild(buildCard(ev));
+
+        if (past.length) {
+          const sep = document.createElement("li");
+          sep.className = "divider";
+          sep.innerHTML = '<span>Past events</span>';
+          listEl.appendChild(sep);
+          for (const ev of past) listEl.appendChild(buildCard(ev));
+        }
+      };
+
+      (async () => {
+        try {
+          const response = await fetch("/events");
+          if (!response.ok) throw new Error("Failed to load events");
+          renderEvents(await response.json());
+        } catch (err) {
+          errorEl.textContent = err.message;
+        }
+      })();
+    </script>
+  </body>
+</html>

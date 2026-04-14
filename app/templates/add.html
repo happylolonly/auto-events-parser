@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Add Event — Da Nang Auto Events Parser</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1><span>Add</span> Event<br /><small class="subtitle-inline">Da Nang Auto Events Parser</small></h1>
+        <a href="/" class="btn btn-ghost">&larr; Back to events</a>
+      </div>
+
+      <p class="subtitle">Paste an event URL to parse and save.</p>
+
+      <form id="parse-form" class="form-row">
+        <input id="url-input" type="url" placeholder="https://example.com/event" required />
+        <button type="submit" class="btn btn-primary">Parse</button>
+      </form>
+
+      <div id="status" class="msg msg-info"></div>
+      <div id="error" class="msg msg-error"></div>
+      <div id="success" class="msg msg-success"></div>
+    </div>
+
+    <script>
+      const form = document.getElementById("parse-form");
+      const urlInput = document.getElementById("url-input");
+      const statusEl = document.getElementById("status");
+      const errorEl = document.getElementById("error");
+      const successEl = document.getElementById("success");
+
+      const clear = () => {
+        statusEl.textContent = "";
+        errorEl.textContent = "";
+        successEl.textContent = "";
+      };
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        clear();
+        statusEl.textContent = "Parsing...";
+        try {
+          const response = await fetch("/parse-event", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ url: urlInput.value }),
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.detail || "Failed to parse URL");
+          }
+          statusEl.textContent = "";
+          successEl.textContent = `Saved: ${data.title}`;
+          urlInput.value = "";
+        } catch (err) {
+          statusEl.textContent = "";
+          errorEl.textContent = err.message;
+        }
+      });
+    </script>
+  </body>
+</html>
